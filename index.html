@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>成大山協圖書館</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#f6f4ef; --surface:#ecebe5; --surface-2:#e4e2da; --surface-3:#e8e4d8;
+  --fg:#1a1916; --muted:#6e6c65; --accent:#8e5b3d; --accent-ink:#f6f4ef;
+  --accent-soft:rgba(142,91,59,.10);
+  --danger:#a13d2f; --danger-bg:#f3e4de; --ok:#3f6b3f; --ok-bg:#e3ebe0;
+  --border:rgba(26,25,22,.16); --border-strong:rgba(26,25,22,.32);
+  --serif:"Noto Serif TC","Source Han Serif TC","Songti TC",serif;
+  --mono:"Space Mono","Courier Prime",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1c1a16; --surface:#242119; --surface-2:#2b271e; --surface-3:#332e23;
+    --fg:#ede8de; --muted:#a39c8d; --accent:#d09666; --accent-ink:#1c1a16;
+    --accent-soft:rgba(208,150,102,.14);
+    --danger:#e0836e; --danger-bg:#3a2420; --ok:#8fbf8a; --ok-bg:#22301f;
+    --border:rgba(237,232,222,.16); --border-strong:rgba(237,232,222,.3);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--serif);-webkit-font-smoothing:antialiased}
+h1,h2,h3{text-wrap:balance;font-weight:700;margin:0}
+p{margin:0}
+img{max-width:100%}
+button,input,textarea,select{font-family:inherit;font-size:14px;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.site-header{
+  position:sticky;top:0;z-index:50;background:var(--bg);
+  border-bottom:.5px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;padding:16px 28px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:12px;font-size:18px;font-weight:600}
+.brand small{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab-btn{background:none;border:1px solid var(--border);border-radius:999px;padding:8px 16px;cursor:pointer;color:var(--muted)}
+.tab-btn.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+main{max-width:1240px;margin:0 auto;padding:28px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.section-title{margin:32px 0 16px;font-size:18px}
+.muted{color:var(--muted);font-size:13px}
+.muted.small{font-size:11.5px}
+.empty-state{color:var(--muted);padding:24px 0}
+
+/* ---------- 借閱書籍：側欄 + 清單 ---------- */
+.browse{display:grid;grid-template-columns:200px 1fr;gap:28px;align-items:start}
+.sidebar{display:flex;flex-direction:column;gap:4px;position:sticky;top:88px}
+.sidebar-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--muted);padding:0 12px 8px}
+.tag-btn{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 12px;border:0;border-radius:6px;background:none;color:var(--fg);
+  font-size:13.5px;cursor:pointer;text-align:left;width:100%;
+}
+.tag-btn:hover{background:var(--surface)}
+.tag-btn.active{background:var(--accent);color:var(--accent-ink)}
+.tag-btn span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag-btn span:last-child{font-family:var(--mono);font-size:10.5px;color:var(--muted);flex:none}
+.tag-btn.active span:last-child{color:var(--accent-ink)}
+
+.list-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px}
+.list-head h2{font-size:22px}
+.count{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;color:var(--muted)}
+#searchInput{width:100%;padding:11px 14px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--fg);margin-bottom:18px}
+
+.table{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}
+.row{display:grid;grid-template-columns:1fr 190px 100px 150px 96px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--border)}
+.row.head{
+  padding:10px 18px;background:var(--surface-2);border-top:0;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--muted);
+}
+.row.mine{background:var(--surface-3)}
+.book-cell{display:flex;align-items:center;gap:12px;min-width:0}
+.thumb{width:34px;height:48px;flex:none;border-radius:3px;object-fit:cover;background:var(--surface-2)}
+.thumb.none{border:1px dashed var(--border-strong)}
+.book-cell h3{font-size:15px;line-height:1.35}
+.book-cell p{color:var(--muted);font-size:12.5px}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.pill{font-family:var(--mono);font-size:10.5px;color:var(--accent);background:var(--accent-soft);border:0;border-radius:999px;padding:3px 8px;cursor:pointer;white-space:nowrap}
+.status{font-family:var(--mono);font-size:11px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;width:fit-content;white-space:nowrap}
+.status-available{background:var(--ok-bg);color:var(--ok)}
+.status-borrowed{background:var(--danger-bg);color:var(--danger)}
+.hint{font-size:11.5px;line-height:1.5;color:var(--accent)}
+
+.btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px}
+.btn.block{width:100%;padding:8px 0}
+.btn.secondary{background:transparent;color:var(--fg);border:1px solid var(--border-strong)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.small{font-size:12px;padding:6px 10px}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* ---------- 推薦書籍 ---------- */
+.rec-layout{display:grid;grid-template-columns:1fr 400px;gap:28px;align-items:start}
+.rec-list{display:flex;flex-direction:column;gap:14px}
+.rec-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.rec-card.purchased{opacity:.7}
+.rec-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.rec-top h3{font-size:16px;line-height:1.35}
+.rec-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none}
+.price{font-family:var(--mono);font-size:14px}
+.chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.chip.digital{background:var(--ok-bg);color:var(--ok)}
+.chip.done{background:var(--ok-bg);color:var(--ok)}
+.rec-notes{font-size:13px;line-height:1.75}
+.rec-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border)}
+.rec-meta{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.rec-actions{display:flex;gap:8px}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-size:18px}
+.panel hr{border:0;border-top:1px solid var(--border);margin:0;width:100%}
+.field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted)}
+.field input,.field textarea,.field select{
+  padding:9px 11px;border:1px solid var(--border-strong);border-radius:6px;
+  background:var(--bg);color:var(--fg);width:100%;
+}
+.field input[readonly]{background:var(--surface-2)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.radio-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.radio-opt{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border-strong);border-radius:6px;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.radio-opt:has(input:checked){border-color:var(--accent);background:var(--surface-2)}
+/* 不要被上面 .field input 的 width:100% 撐開，否則會把文字擠成兩行 */
+.radio-opt input{accent-color:var(--accent);margin:0;width:auto;flex:none}
+.scan-btn{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;width:100%;font-size:14px}
+#recReader,#reader{border-radius:8px;overflow:hidden}
+
+/* ---------- 登入 / 個人資料 ---------- */
+.login-panel{max-width:420px;margin:60px auto;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px 24px}
+.login-panel h2{font-size:19px;margin-bottom:10px}
+.login-panel .muted{margin-bottom:22px}
+#gsiButton{display:flex;justify-content:center}
+.link-btn{background:none;border:0;padding:0;color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline}
+.profile-form{display:flex;flex-direction:column;gap:14px;margin-top:22px;text-align:left}
+.profile-form fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.profile-form legend{padding:0;font-size:12.5px;color:var(--muted)}
+.role-options{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+
+/* ---------- 登入新書 ---------- */
+.register-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.book-form{display:flex;flex-direction:column;gap:10px}
+.cover-preview{width:96px;border-radius:6px;align-self:center}
+.manual-entry{margin-top:16px}
+.inline-form{display:flex;gap:8px;margin-top:6px}
+.inline-form input{flex:1;padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--bg);color:var(--fg)}
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.admin-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:6px}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:8px;font-size:13px;z-index:100;max-width:90vw;text-align:center}
+.config-warning{background:var(--danger-bg);color:var(--danger);padding:14px 18px;border-radius:8px;margin-bottom:20px;font-size:13.5px;line-height:1.7}
+.login-error{margin-top:18px;background:var(--danger-bg);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.7;text-align:left}
+
+@media (max-width:900px){
+  main{padding:20px 16px}
+  .site-header{padding:14px 16px}
+  .browse,.rec-layout,.register-grid{grid-template-columns:1fr}
+  .sidebar{position:static;flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .sidebar-label{display:none}
+  .tag-btn{width:auto;flex:none;border:1px solid var(--border);border-radius:999px;padding:9px 15px;font-size:12.5px}
+  .row,.row.head{grid-template-columns:1fr;gap:8px}
+  .row.head{display:none}
+  .row{padding:14px 16px}
+  .btn.block{width:auto;padding:0 22px;height:44px}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <span>成大山協圖書館</span>
+    <small id="userBadge">未登入</small>
+    <button id="editProfileBtn" class="link-btn" type="button" hidden>編輯資料</button>
+  </div>
+  <nav class="tabs" id="tabs" hidden>
+    <button class="tab-btn active" data-tab="borrow" type="button">借閱書籍</button>
+    <button class="tab-btn" data-tab="mine" type="button">我的借閱</button>
+    <button class="tab-btn" data-tab="recommend" type="button">推薦書籍</button>
+    <button class="tab-btn admin-only" data-tab="register" type="button" hidden>登入新書</button>
+  </nav>
+</header>
+
+<main>
+  <div id="configWarning" class="config-warning" hidden></div>
+
+  <section id="loginPanel" class="login-panel">
+    <h2>請先用學校 Google 帳號登入</h2>
+    <p class="muted">僅限 @gs.ncku.edu.tw 或 @ncku.edu.tw 帳號</p>
+    <div id="gsiButton"></div>
+    <p id="loginError" class="login-error" hidden></p>
+  </section>
+
+  <section id="profilePanel" class="login-panel" hidden>
+    <h2 id="profileTitle">完成個人資料</h2>
+    <p class="muted" id="profileIntro">第一次使用需要登記，之後借書就會記在你名下</p>
+    <form id="profileForm" class="profile-form">
+      <label class="field">姓名或暱稱
+        <input id="pName" type="text" maxlength="30" required placeholder="其他人看得到的稱呼">
+      </label>
+      <label class="field">學號
+        <input id="pStudentId" type="text" maxlength="12" placeholder="例如 E74096035">
+      </label>
+      <fieldset>
+        <legend>身分</legend>
+        <div class="role-options" id="roleOptions"></div>
+      </fieldset>
+      <button type="submit" class="btn" id="pSubmit">儲存並開始使用</button>
+      <button type="button" class="btn secondary" id="pCancel" hidden>取消</button>
+      <p id="profileError" class="login-error" hidden></p>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+
+    <!-- 借閱書籍 -->
+    <section id="tab-borrow" class="tab-panel active">
+      <div class="browse">
+        <aside class="sidebar" id="tagSidebar"></aside>
+        <div style="min-width:0">
+          <div class="list-head">
+            <h2 id="listTitle">全部館藏</h2>
+            <span class="count" id="listCount"></span>
+          </div>
+          <input id="searchInput" type="search" placeholder="搜尋書名、作者、出版社、標籤…">
+          <div id="bookList"><p class="empty-state">載入書籍資料中…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 我的借閱 -->
+    <section id="tab-mine" class="tab-panel">
+      <div class="list-head">
+        <h2>我的借閱</h2>
+        <span class="count" id="quotaCount"></span>
+      </div>
+      <div id="myBorrowList"></div>
+    </section>
+
+    <!-- 推薦書籍 -->
+    <section id="tab-recommend" class="tab-panel">
+      <div class="rec-layout">
+        <div style="min-width:0">
+          <div class="list-head">
+            <h2>大家想買的書</h2>
+            <span class="count" id="recCount"></span>
+          </div>
+          <p class="muted" style="margin-bottom:20px">這裡是還沒買的書。資料組採購後會登入館藏，就能借閱。</p>
+          <div id="recList" class="rec-list"><p class="empty-state">載入中…</p></div>
+        </div>
+
+        <aside class="panel">
+          <h2>推薦一本書</h2>
+          <button id="recScanBtn" class="btn scan-btn" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7h2l1.5-2h11L19 7h2v12H3z"></path><circle cx="12" cy="12.5" r="3.5"></circle>
+            </svg>
+            掃描 ISBN 自動填寫
+          </button>
+          <button id="recStopScanBtn" class="btn secondary" type="button" hidden>停止掃描</button>
+          <div id="recReader"></div>
+          <p class="muted small" style="margin-top:-6px">掃到書背條碼後，書名、作者、出版單位會自動帶入，其餘欄位再手動補。</p>
+          <hr>
+
+          <form id="recForm" style="display:flex;flex-direction:column;gap:14px">
+            <label class="field">推薦人
+              <input id="rRecommender" type="text" readonly>
+            </label>
+            <label class="field">書籍名稱
+              <input id="rTitle" type="text" required maxlength="120" placeholder="必填">
+            </label>
+            <div class="two-col">
+              <label class="field">作者<input id="rAuthor" type="text"></label>
+              <label class="field">出版單位<input id="rPublisher" type="text"></label>
+            </div>
+            <div class="field">
+              <span>形式</span>
+              <div class="radio-row">
+                <label class="radio-opt"><input type="radio" name="recFormat" value="實體書" checked>實體書</label>
+                <label class="radio-opt"><input type="radio" name="recFormat" value="電子書">電子書</label>
+              </div>
+            </div>
+            <label class="field">類型標籤
+              <input id="rTags" type="text" placeholder="技術 雪攀（空白分隔，最多 8 個）">
+            </label>
+            <div class="two-col">
+              <label class="field">ISBN / ISSN<input id="rIsbn" type="text"></label>
+              <label class="field">價格<input id="rPrice" type="text" inputmode="numeric" placeholder="NT$"></label>
+            </div>
+            <label class="field">參考連結
+              <input id="rLink" type="url" placeholder="https://…（博客來、出版社網頁）">
+            </label>
+            <label class="field">備註
+              <textarea id="rNotes" rows="3" placeholder="為什麼推薦這本書？"></textarea>
+            </label>
+            <button type="submit" class="btn" id="rSubmit" style="height:44px;font-size:14px">送出推薦</button>
+          </form>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 登入新書 -->
+    <section id="tab-register" class="tab-panel">
+      <div class="register-grid">
+        <div class="panel">
+          <h2>掃描 ISBN 條碼</h2>
+          <div id="reader"></div>
+          <div style="display:flex;gap:8px">
+            <button id="startScanBtn" class="btn" type="button">開始掃描</button>
+            <button id="stopScanBtn" class="btn secondary" type="button" hidden>停止掃描</button>
+          </div>
+          <div class="manual-entry">
+            <label for="manualIsbn" class="muted small">相機無法使用時，可手動輸入 ISBN</label>
+            <div class="inline-form">
+              <input id="manualIsbn" type="text" inputmode="numeric" placeholder="例如 9789865061377">
+              <button id="lookupBtn" class="btn secondary" type="button">查詢</button>
+            </div>
+          </div>
+        </div>
+
+        <form id="bookForm" class="panel book-form" hidden>
+          <h2>確認書籍資料</h2>
+          <img id="formCover" class="cover-preview" hidden alt="書籍封面">
+          <label class="field">ISBN<input id="fISBN" readonly></label>
+          <label class="field">書名<input id="fTitle" required></label>
+          <label class="field">作者<input id="fAuthor"></label>
+          <label class="field">出版社<input id="fPublisher"></label>
+          <label class="field">出版日期<input id="fPublishedDate"></label>
+          <label class="field">標籤<input id="fTags" placeholder="百岳 地圖（空白分隔，最多 8 個）"></label>
+          <label class="field">備註<textarea id="fNotes" rows="2"></textarea></label>
+          <button type="submit" class="btn">登入為山協書本財產</button>
+        </form>
+      </div>
+
+      <h2 class="section-title">館藏管理（移除＝已回收或贈與）</h2>
+      <div id="adminBookList" class="admin-grid"></div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* ===== 部署前必填 ===== */
+var API_URL   = 'https://script.google.com/macros/s/AKfycbx4VmYOnu-K6Bu8g3iFY5XbKhf2DuMtX9eLnDGQV_wJSjJIzL1FMV-WEg16VztS0vLv/exec';
+var CLIENT_ID = '451105064272-gmetlec70328n4m0l2umerhjjf046l29.apps.googleusercontent.com';
+/* ====================== */
+
+var idToken = null;
+var currentUser = null;
+var allBooks = [];
+var allRecs = [];
+var activeTag = null;
+var scanner = null;
+
+document.addEventListener('DOMContentLoaded', function () {
+  if (API_URL.indexOf('http') !== 0 || CLIENT_ID.indexOf('.apps.googleusercontent.com') === -1) {
+    var w = document.getElementById('configWarning');
+    w.innerHTML = '⚠️ 尚未完成設定：請打開 index.html，把最上方的 <b>API_URL</b> 與 <b>CLIENT_ID</b> 換成你自己的值。';
+    w.hidden = false;
+  }
+  bindTabs();
+  bindSearch();
+  bindRegisterForm();
+  bindProfileForm();
+  bindRecommendForm();
+
+  var saved = sessionStorage.getItem('idToken');
+  if (saved) { idToken = saved; startApp(); }
+});
+
+/* ---------- 登入 ---------- */
+
+function initGsi() {
+  if (!window.google || !google.accounts || !google.accounts.id) return false;
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: function (resp) {
+      idToken = resp.credential;
+      sessionStorage.setItem('idToken', idToken);
+      startApp();
+    }
+  });
+  google.accounts.id.renderButton(document.getElementById('gsiButton'),
+    { theme: 'outline', size: 'large', text: 'signin_with', locale: 'zh_TW' });
+  return true;
+}
+(function waitForGsi() { if (!initGsi()) setTimeout(waitForGsi, 200); })();
+
+function signOut() {
+  idToken = null;
+  currentUser = null;
+  sessionStorage.removeItem('idToken');
+  document.getElementById('app').hidden = true;
+  document.getElementById('tabs').hidden = true;
+  document.getElementById('profilePanel').hidden = true;
+  document.getElementById('editProfileBtn').hidden = true;
+  document.getElementById('loginPanel').hidden = false;
+  document.getElementById('userBadge').textContent = '未登入';
+}
+
+function startApp() {
+  document.getElementById('loginError').hidden = true;
+  api('me').then(function (info) {
+    currentUser = info;
+    document.getElementById('loginPanel').hidden = true;
+    if (!info.profile) showProfilePanel(true);
+    else enterApp();
+  }).catch(function (err) {
+    signOut();
+    var el = document.getElementById('loginError');
+    el.textContent = '登入失敗：' + ((err && err.message) ? err.message : String(err));
+    el.hidden = false;
+  });
+}
+
+function enterApp() {
+  var info = currentUser, p = info.profile;
+  document.getElementById('profilePanel').hidden = true;
+  document.getElementById('app').hidden = false;
+  document.getElementById('tabs').hidden = false;
+  document.getElementById('editProfileBtn').hidden = false;
+  document.getElementById('userBadge').textContent = p.name + '　' + p.role + (info.isAdmin ? '· 資料組' : '');
+  if (info.isAdmin) {
+    Array.prototype.forEach.call(document.querySelectorAll('.admin-only'), function (el) { el.hidden = false; });
+  }
+  document.getElementById('rRecommender').value = p.name;
+  loadBooks();
+  loadRecs();
+}
+
+/* ---------- 個人資料 ---------- */
+
+function showProfilePanel(isFirstTime) {
+  var p = currentUser.profile;
+  document.getElementById('app').hidden = true;
+  document.getElementById('tabs').hidden = true;
+  document.getElementById('profileError').hidden = true;
+  document.getElementById('profilePanel').hidden = false;
+  document.getElementById('profileTitle').textContent = isFirstTime ? '完成個人資料' : '編輯個人資料';
+  document.getElementById('profileIntro').textContent = isFirstTime
+    ? '第一次使用需要登記，之後借書就會記在你名下'
+    : '登入帳號：' + currentUser.email;
+  document.getElementById('pSubmit').textContent = isFirstTime ? '儲存並開始使用' : '儲存變更';
+  document.getElementById('pCancel').hidden = !!isFirstTime;
+  document.getElementById('pName').value = p ? p.name : '';
+  document.getElementById('pStudentId').value = p ? p.studentId : '';
+  document.getElementById('roleOptions').innerHTML = (currentUser.roles || []).map(function (role) {
+    var checked = p && p.role === role ? ' checked' : '';
+    return '<label class="radio-opt"><input type="radio" name="role" value="' +
+      escapeHtml(role) + '"' + checked + '>' + escapeHtml(role) + '</label>';
+  }).join('');
+}
+
+function bindProfileForm() {
+  document.getElementById('editProfileBtn').addEventListener('click', function () { showProfilePanel(false); });
+  document.getElementById('pCancel').addEventListener('click', enterApp);
+  document.getElementById('profileForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var picked = document.querySelector('input[name="role"]:checked');
+    var btn = document.getElementById('pSubmit');
+    var errEl = document.getElementById('profileError');
+    errEl.hidden = true; btn.disabled = true;
+    api('saveProfile', { profile: {
+      name: document.getElementById('pName').value,
+      studentId: document.getElementById('pStudentId').value,
+      role: picked ? picked.value : ''
+    }}).then(function (saved) {
+      currentUser.profile = saved;
+      btn.disabled = false;
+      showToast('個人資料已儲存');
+      enterApp();
+    }).catch(function (err) {
+      btn.disabled = false;
+      errEl.textContent = (err && err.message) ? err.message : String(err);
+      errEl.hidden = false;
+    });
+  });
+}
+
+/* ---------- API ---------- */
+
+function transportError(msg) { var e = new Error(msg); e.transport = true; return e; }
+
+function apiOnce(action, payload) {
+  var body = { action: action, idToken: idToken };
+  if (payload) Object.keys(payload).forEach(function (k) { body[k] = payload[k]; });
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  }).then(function (res) {
+    return res.text().then(function (text) {
+      if (!res.ok) throw transportError('HTTP ' + res.status);
+      if (!text) throw transportError('伺服器回應空白');
+      var json;
+      try { json = JSON.parse(text); } catch (e) { throw transportError('回應格式錯誤'); }
+      if (!json.ok) throw new Error(json.error || '未知錯誤');
+      return json.data;
+    });
+  }, function () { throw transportError('連線失敗'); });
+}
+
+/**
+ * Apps Script 會把 POST 轉址到一次性的 googleusercontent 網址取回結果。
+ * 某些瀏覽器擴充功能會搶先讀取該網址、把 key 用掉，導致我們拿到 404。
+ * 因此連線層失敗時自動重試一次（重試會產生全新的 key）。
+ */
+function api(action, payload) {
+  return apiOnce(action, payload).catch(function (err) {
+    if (!err.transport) throw err;
+    return apiOnce(action, payload).catch(function (err2) {
+      if (!err2.transport) throw err2;
+      throw new Error('無法連線到圖書館伺服器。若持續失敗，可能是瀏覽器擴充功能干擾，請改用無痕視窗，或停用擴充功能後再試。');
+    });
+  });
+}
+
+/* ---------- 標籤 ---------- */
+
+function parseTags(s) {
+  return String(s || '').split(/[\s,，、#]+/).filter(Boolean);
+}
+
+function tagPillsHtml(s) {
+  return parseTags(s).map(function (t) {
+    return '<button class="pill" type="button" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</button>';
+  }).join('');
+}
+
+/** 側欄分類清單：全部館藏在最上面，其餘標籤依數量排在下面。 */
+function renderTagFilter() {
+  var counts = {};
+  allBooks.forEach(function (b) {
+    parseTags(b.Tags).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; });
+  });
+  var names = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+
+  var el = document.getElementById('tagSidebar');
+  el.innerHTML = '<div class="sidebar-label">分類</div>' +
+    tagBtnHtml(null, '全部館藏', allBooks.length) +
+    names.map(function (t) { return tagBtnHtml(t, t, counts[t]); }).join('');
+
+  Array.prototype.forEach.call(el.querySelectorAll('[data-filter]'), function (btn) {
+    btn.addEventListener('click', function () {
+      activeTag = btn.dataset.filter || null;
+      renderBooks();
+    });
+  });
+}
+
+function tagBtnHtml(value, label, count) {
+  var active = (activeTag === value) ? ' active' : '';
+  return '<button class="tag-btn' + active + '" type="button" data-filter="' +
+    escapeHtml(value === null ? '' : value) + '">' +
+    '<span>' + escapeHtml(label) + '</span><span>' + count + '</span></button>';
+}
+
+/* ---------- 借閱書籍 ---------- */
+
+function loadBooks() {
+  api('listBooks').then(function (books) {
+    allBooks = books;
+    renderBooks();
+    renderAdminBookList(books);
+  }).catch(showError);
+}
+
+function filteredBooks() {
+  var q = document.getElementById('searchInput').value.trim().toLowerCase();
+  return allBooks.filter(function (b) {
+    if (activeTag && parseTags(b.Tags).indexOf(activeTag) === -1) return false;
+    if (!q) return true;
+    return [b.Title, b.Author, b.Publisher, b.Tags].some(function (f) {
+      return String(f || '').toLowerCase().indexOf(q) !== -1;
+    });
+  });
+}
+
+function renderBooks() {
+  renderTagFilter();
+  var books = filteredBooks();
+  document.getElementById('listTitle').textContent = activeTag || '全部館藏';
+  var maxBorrow = (currentUser && currentUser.maxBorrow) || 5;
+  var mine = myBorrowCount();
+  document.getElementById('listCount').textContent =
+    books.length + ' 冊' +
+    (activeTag ? '' : ' · 可借 ' + allBooks.filter(function (b) { return b.Status !== '借出中'; }).length) +
+    '　|　你已借 ' + mine + ' / ' + maxBorrow;
+
+  var el = document.getElementById('bookList');
+  if (!books.length) { el.innerHTML = '<p class="empty-state">沒有符合的書籍</p>'; return; }
+  el.innerHTML = '<div class="table">' +
+    '<div class="row head"><span>書籍</span><span>標籤</span><span>狀態</span><span>借閱人 / 到期</span><span></span></div>' +
+    books.map(bookRowHtml).join('') + '</div>';
+  bindBookActions(el);
+}
+
+/** 我目前借在手上的本數（由書單即時算出，不需另外呼叫 API）。 */
+function myBorrowCount() {
+  if (!currentUser) return 0;
+  return allBooks.filter(function (b) {
+    return String(b.CurrentBorrower).toLowerCase() === currentUser.email;
+  }).length;
+}
+
+function bookRowHtml(b) {
+  var isBorrowed = b.Status === '借出中';
+  var isMine = isBorrowed && currentUser &&
+    String(b.CurrentBorrower).toLowerCase() === currentUser.email;
+  var canReturn = isBorrowed && currentUser && currentUser.isAdmin;
+  var maxBorrow = (currentUser && currentUser.maxBorrow) || 5;
+  var atLimit = myBorrowCount() >= maxBorrow;
+  var thumb = b.CoverImageURL
+    ? '<img class="thumb" src="' + escapeHtml(b.CoverImageURL) + '" alt="">'
+    : '<div class="thumb none"></div>';
+
+  var action = '';
+  if (!isBorrowed) {
+    action = atLimit
+      ? '<span class="hint">已借滿 ' + maxBorrow + ' 本</span>'
+      : '<button class="btn block" type="button" data-borrow="' + escapeHtml(b.BookID) + '">借閱</button>';
+  }
+  else if (canReturn) action = '<button class="btn secondary block" type="button" data-return="' + escapeHtml(b.BookID) + '">確認歸還</button>';
+  else if (isMine) action = '<span class="hint">交資料組<br>歸還</span>';
+
+  var who = isBorrowed
+    ? '<span class="muted small">' + (isMine ? '你借的' : escapeHtml(b.CurrentBorrowerName || b.CurrentBorrower || '')) +
+      '<br>' + formatDate(b.DueDate) + ' 到期</span>'
+    : '<span class="muted small">—</span>';
+
+  return '<div class="row' + (isMine ? ' mine' : '') + '">' +
+    '<div class="book-cell">' + thumb +
+      '<div style="min-width:0"><h3>' + escapeHtml(b.Title) + '</h3>' +
+      '<p>' + escapeHtml(b.Author || '') + (b.Publisher ? '　·　' + escapeHtml(b.Publisher) : '') + '</p></div>' +
+    '</div>' +
+    '<div class="tags">' + tagPillsHtml(b.Tags) + '</div>' +
+    '<span class="status ' + (isBorrowed ? 'status-borrowed' : 'status-available') + '">' + escapeHtml(b.Status) + '</span>' +
+    who + action + '</div>';
+}
+
+function bindBookActions(container) {
+  Array.prototype.forEach.call(container.querySelectorAll('[data-borrow]'), function (btn) {
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      api('borrow', { bookId: btn.dataset.borrow })
+        .then(function (r) { showToast('借閱成功，請於 ' + formatDate(r.dueDate) + ' 前歸還'); loadBooks(); })
+        .catch(function (e) { btn.disabled = false; showError(e); });
+    });
+  });
+  Array.prototype.forEach.call(container.querySelectorAll('[data-return]'), function (btn) {
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      api('return', { bookId: btn.dataset.return })
+        .then(function () { showToast('已確認歸還'); loadBooks(); renderMyBorrow(); })
+        .catch(function (e) { btn.disabled = false; showError(e); });
+    });
+  });
+  Array.prototype.forEach.call(container.querySelectorAll('[data-tag]'), function (btn) {
+    btn.addEventListener('click', function () { activeTag = btn.dataset.tag; renderBooks(); });
+  });
+}
+
+function renderMyBorrow() {
+  api('myBorrows').then(function (books) {
+    var el = document.getElementById('myBorrowList');
+    var maxBorrow = (currentUser && currentUser.maxBorrow) || 5;
+    document.getElementById('quotaCount').textContent =
+      '已借 ' + books.length + ' / ' + maxBorrow + ' 本';
+    el.innerHTML = books.length
+      ? '<div class="table">' + books.map(bookRowHtml).join('') + '</div>'
+      : '<p class="empty-state">目前沒有借閱中的書籍</p>';
+    bindBookActions(el);
+  }).catch(showError);
+}
+
+/* ---------- 推薦書籍 ---------- */
+
+function loadRecs() {
+  api('listRecs').then(function (recs) {
+    allRecs = recs;
+    renderRecs();
+  }).catch(showError);
+}
+
+function renderRecs() {
+  var el = document.getElementById('recList');
+  var wanted = allRecs.filter(function (r) { return r.Status !== '已採購'; }).length;
+  document.getElementById('recCount').textContent = allRecs.length + ' 筆 · 待購 ' + wanted;
+
+  if (!allRecs.length) { el.innerHTML = '<p class="empty-state">還沒有人推薦書籍，你可以是第一個</p>'; return; }
+
+  var sorted = allRecs.slice().sort(function (a, b) {
+    var pa = a.Status === '已採購' ? 1 : 0, pb = b.Status === '已採購' ? 1 : 0;
+    if (pa !== pb) return pa - pb;
+    return String(b.CreatedAt || '').localeCompare(String(a.CreatedAt || ''));
+  });
+  el.innerHTML = sorted.map(recCardHtml).join('');
+  bindRecActions(el);
+}
+
+function recCardHtml(r) {
+  var purchased = r.Status === '已採購';
+  var isMine = currentUser && String(r.RecommenderEmail).toLowerCase() === currentUser.email;
+  var canDelete = isMine || (currentUser && currentUser.isAdmin);
+  var isAdmin = currentUser && currentUser.isAdmin;
+  var digital = r.Format === '電子書';
+
+  var actions = '';
+  if (isAdmin) {
+    actions += '<button class="btn secondary small" type="button" data-purchase="' + escapeHtml(r.RecID) +
+      '" data-value="' + (purchased ? 'false' : 'true') + '">' +
+      (purchased ? '取消已採購' : '標記已採購') + '</button>';
+  }
+  if (canDelete) {
+    actions += '<button class="btn danger small" type="button" data-delrec="' + escapeHtml(r.RecID) + '">刪除</button>';
+  }
+
+  return '<article class="rec-card' + (purchased ? ' purchased' : '') + '">' +
+    '<div class="rec-top">' +
+      '<div style="min-width:0;display:flex;flex-direction:column;gap:3px">' +
+        '<h3>' + escapeHtml(r.Title) + '</h3>' +
+        '<p class="muted">' + escapeHtml(r.Author || '') +
+          (r.Publisher ? '　·　' + escapeHtml(r.Publisher) : '') + '</p>' +
+      '</div>' +
+      '<div class="rec-side">' +
+        (r.Price ? '<span class="price">NT$' + escapeHtml(r.Price) + '</span>' : '') +
+        '<span class="chip' + (digital ? ' digital' : '') + '">' + escapeHtml(r.Format || '實體書') + '</span>' +
+        (purchased ? '<span class="chip done">已採購</span>' : '') +
+      '</div>' +
+    '</div>' +
+    (r.Tags ? '<div class="tags">' + tagPillsHtml(r.Tags).replace(/data-tag=/g, 'data-rectag=') + '</div>' : '') +
+    (r.Notes ? '<p class="rec-notes">' + escapeHtml(r.Notes) + '</p>' : '') +
+    '<div class="rec-foot">' +
+      '<span class="rec-meta">' + escapeHtml(r.RecommenderName || '') + '　·　' + formatDate(r.CreatedAt) +
+        (r.ISBN ? '　·　ISBN ' + escapeHtml(r.ISBN) : '') + '</span>' +
+      '<span class="rec-actions">' +
+        (r.RefLink ? '<a href="' + escapeHtml(r.RefLink) + '" target="_blank" rel="noopener" style="font-size:12.5px">參考連結</a>' : '') +
+        actions +
+      '</span>' +
+    '</div></article>';
+}
+
+function bindRecActions(container) {
+  Array.prototype.forEach.call(container.querySelectorAll('[data-delrec]'), function (btn) {
+    btn.addEventListener('click', function () {
+      if (!confirm('確定要刪除這筆推薦嗎？')) return;
+      btn.disabled = true;
+      api('removeRec', { recId: btn.dataset.delrec })
+        .then(function () { showToast('已刪除'); loadRecs(); })
+        .catch(function (e) { btn.disabled = false; showError(e); });
+    });
+  });
+  Array.prototype.forEach.call(container.querySelectorAll('[data-purchase]'), function (btn) {
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      api('markPurchased', { recId: btn.dataset.purchase, purchased: btn.dataset.value === 'true' })
+        .then(function () { showToast('已更新狀態'); loadRecs(); })
+        .catch(function (e) { btn.disabled = false; showError(e); });
+    });
+  });
+}
+
+function bindRecommendForm() {
+  document.getElementById('recScanBtn').addEventListener('click', function () {
+    startScanner('recReader', 'recScanBtn', 'recStopScanBtn', function (isbn) {
+      document.getElementById('rIsbn').value = isbn;
+      showToast('查詢中…');
+      api('lookupIsbn', { isbn: isbn }).then(function (r) {
+        if (!r.found) { showToast(r.note || '查無資料，請手動填寫'); return; }
+        document.getElementById('rTitle').value = r.title || '';
+        document.getElementById('rAuthor').value = r.author || '';
+        document.getElementById('rPublisher').value = r.publisher || '';
+        showToast('已帶入書籍資料');
+      }).catch(showError);
+    });
+  });
+  document.getElementById('recStopScanBtn').addEventListener('click', function () {
+    stopScanner('recScanBtn', 'recStopScanBtn');
+  });
+
+  document.getElementById('recForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var btn = document.getElementById('rSubmit');
+    var fmt = document.querySelector('input[name="recFormat"]:checked');
+    btn.disabled = true;
+    api('addRec', { rec: {
+      title: document.getElementById('rTitle').value,
+      author: document.getElementById('rAuthor').value,
+      publisher: document.getElementById('rPublisher').value,
+      format: fmt ? fmt.value : '實體書',
+      tags: document.getElementById('rTags').value,
+      isbn: document.getElementById('rIsbn').value,
+      price: document.getElementById('rPrice').value,
+      refLink: document.getElementById('rLink').value,
+      notes: document.getElementById('rNotes').value
+    }}).then(function () {
+      btn.disabled = false;
+      showToast('推薦已送出');
+      document.getElementById('recForm').reset();
+      document.getElementById('rRecommender').value = currentUser.profile.name;
+      loadRecs();
+    }).catch(function (err) { btn.disabled = false; showError(err); });
+  });
+}
+
+/* ---------- 登入新書 ---------- */
+
+function renderAdminBookList(books) {
+  var el = document.getElementById('adminBookList');
+  if (!el) return;
+  el.innerHTML = books.length ? books.map(function (b) {
+    return '<article class="admin-card">' +
+      '<h3 style="font-size:15px">' + escapeHtml(b.Title) + '</h3>' +
+      '<p class="muted small">' + escapeHtml(b.ISBN || '') + '　' + escapeHtml(b.Status) + '</p>' +
+      '<button class="btn danger small" type="button" data-remove="' + escapeHtml(b.BookID) + '" style="align-self:flex-start">移除書籍</button>' +
+      '</article>';
+  }).join('') : '<p class="empty-state">尚未登入任何書籍</p>';
+
+  Array.prototype.forEach.call(el.querySelectorAll('[data-remove]'), function (btn) {
+    btn.addEventListener('click', function () {
+      if (!confirm('確定要移除這本書嗎？代表已回收或贈與，此動作無法復原。')) return;
+      btn.disabled = true;
+      api('removeBook', { bookId: btn.dataset.remove })
+        .then(function () { showToast('已移除'); loadBooks(); })
+        .catch(function (e) { btn.disabled = false; showError(e); });
+    });
+  });
+}
+
+function bindRegisterForm() {
+  document.getElementById('lookupBtn').addEventListener('click', function () {
+    var isbn = document.getElementById('manualIsbn').value.trim();
+    if (isbn) runIsbnLookup(isbn);
+  });
+  document.getElementById('startScanBtn').addEventListener('click', function () {
+    startScanner('reader', 'startScanBtn', 'stopScanBtn', function (isbn) {
+      document.getElementById('manualIsbn').value = isbn;
+      runIsbnLookup(isbn);
+    });
+  });
+  document.getElementById('stopScanBtn').addEventListener('click', function () {
+    stopScanner('startScanBtn', 'stopScanBtn');
+  });
+  document.getElementById('bookForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    submitBook();
+  });
+}
+
+function runIsbnLookup(isbn) {
+  showToast('查詢中…');
+  api('lookupIsbn', { isbn: isbn }).then(function (result) {
+    if (!result.found) showToast(result.note || '查無資料，請手動填寫書名後送出');
+    fillForm(result);
+  }).catch(function (err) {
+    showError(err);
+    fillForm({ isbn: String(isbn).replace(/[^0-9Xx]/g, '') });
+  });
+}
+
+function fillForm(r) {
+  document.getElementById('bookForm').hidden = false;
+  document.getElementById('fISBN').value = r.isbn || '';
+  document.getElementById('fTitle').value = r.title || '';
+  document.getElementById('fAuthor').value = r.author || '';
+  document.getElementById('fPublisher').value = r.publisher || '';
+  document.getElementById('fPublishedDate').value = r.publishedDate || '';
+  var cover = document.getElementById('formCover');
+  if (r.coverImageUrl) { cover.src = r.coverImageUrl; cover.hidden = false; }
+  else { cover.removeAttribute('src'); cover.hidden = true; }
+}
+
+function submitBook() {
+  var cover = document.getElementById('formCover');
+  api('addBook', { book: {
+    isbn: document.getElementById('fISBN').value,
+    title: document.getElementById('fTitle').value,
+    author: document.getElementById('fAuthor').value,
+    publisher: document.getElementById('fPublisher').value,
+    publishedDate: document.getElementById('fPublishedDate').value,
+    tags: document.getElementById('fTags').value,
+    notes: document.getElementById('fNotes').value,
+    coverImageUrl: cover.hidden ? '' : cover.src
+  }}).then(function () {
+    showToast('已登入為山協書本財產');
+    document.getElementById('bookForm').reset();
+    document.getElementById('bookForm').hidden = true;
+    cover.hidden = true;
+    loadBooks();
+  }).catch(showError);
+}
+
+/* ---------- 條碼掃描（借閱頁與推薦頁共用） ---------- */
+
+function startScanner(readerId, startBtnId, stopBtnId, onDecoded) {
+  if (typeof Html5Qrcode === 'undefined') { showToast('條碼函式庫尚未載入，請稍候再試'); return; }
+  stopScanner();
+  document.getElementById(startBtnId).hidden = true;
+  document.getElementById(stopBtnId).hidden = false;
+  scanner = new Html5Qrcode(readerId);
+  scanner._startBtnId = startBtnId;
+  scanner._stopBtnId = stopBtnId;
+  scanner.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 260, height: 130 }, formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] },
+    function (decodedText) {
+      stopScanner(startBtnId, stopBtnId);
+      onDecoded(decodedText);
+    },
+    function () { /* 每幀掃不到條碼都會呼叫，忽略 */ }
+  ).catch(function (err) {
+    showToast('相機啟動失敗：' + err);
+    stopScanner(startBtnId, stopBtnId);
+  });
+}
+
+function stopScanner(startBtnId, stopBtnId) {
+  if (scanner) {
+    var sid = startBtnId || scanner._startBtnId;
+    var tid = stopBtnId || scanner._stopBtnId;
+    if (sid) document.getElementById(sid).hidden = false;
+    if (tid) document.getElementById(tid).hidden = true;
+    scanner.stop().then(function () { scanner.clear(); }).catch(function () {});
+    scanner = null;
+  } else {
+    if (startBtnId) document.getElementById(startBtnId).hidden = false;
+    if (stopBtnId) document.getElementById(stopBtnId).hidden = true;
+  }
+}
+
+/* ---------- 共用 ---------- */
+
+function bindTabs() {
+  Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function (btn) {
+    btn.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function (b) { b.classList.remove('active'); });
+      Array.prototype.forEach.call(document.querySelectorAll('.tab-panel'), function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'mine') renderMyBorrow();
+      if (btn.dataset.tab !== 'register' && btn.dataset.tab !== 'recommend') stopScanner();
+    });
+  });
+}
+
+function bindSearch() {
+  document.getElementById('searchInput').addEventListener('input', renderBooks);
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  var date = new Date(d);
+  return isNaN(date) ? String(d) : date.toLocaleDateString('zh-TW');
+}
+
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(function () { el.hidden = true; }, 3500);
+}
+
+function showError(err) {
+  var msg = (err && err.message) ? err.message : String(err);
+  showToast('錯誤：' + msg);
+  if (msg.indexOf('憑證') !== -1 || msg.indexOf('請先登入') !== -1) signOut();
+}
+</script>
+</body>
+</html>
